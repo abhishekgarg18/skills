@@ -1,57 +1,127 @@
 ---
 name: ensure-agents-md
 description: |
-  Ensures AGENTS.md exists at the project root for AEM as a Cloud Service customer projects.
-  Apply at the start of any user request when the workspace appears to be an AEM Cloud Service
-  project (e.g. has pom.xml with AEM parent or dispatcher module) and AGENTS.md is not present
-  in the repository root. Creates AGENTS.md from the skill template, configured with the
-  customer project name. Do not overwrite an existing AGENTS.md.
+  Bootstrap skill — run FIRST before any other work when the workspace is an AEM as a Cloud Service
+  project and AGENTS.md is missing from the repository root. Creates a project-specific AGENTS.md
+  (and CLAUDE.md) by introspecting pom.xml modules, detecting add-ons, and tailoring build commands
+  and resources to the actual project. Never overwrites existing files.
 license: Apache-2.0
 compatibility: AEM as a Cloud Service projects (Java stack, Maven, Dispatcher).
 ---
 
-# Ensure AGENTS.md in customer repo
+# Ensure AGENTS.md (bootstrap)
 
-This skill ensures every AEM Cloud Service customer project has an **AGENTS.md** at the repository root so AI coding agents get consistent project guidance. Run it **first** when the user asks anything and AGENTS.md is missing.
+Creates a **project-specific** `AGENTS.md` and `CLAUDE.md` in the repository root so every AI coding
+agent gets accurate guidance for this AEM Cloud Service workspace.
 
-## When to run
+> **Priority:** Run this skill **before** any other skill or user task.
+> If AGENTS.md already exists, skip immediately and proceed with the user's request.
 
-1. **At the start of the conversation** when the user has asked a question or given a task.
-2. **Only if** `AGENTS.md` does **not** exist at the workspace root (e.g. `AGENTS.md` in the project root).
-3. **Only if** the workspace looks like an AEM Cloud Service project (has a root `pom.xml`, and typically a `dispatcher` module or AEM archetype structure). If in doubt, treat as AEM Cloud Service when `pom.xml` exists and references AEM or Cloud Manager.
+## Gate check
 
-If AGENTS.md already exists, skip this skill and proceed with the user's request.
+1. Look for `AGENTS.md` at the **workspace root**. If it exists → skip, move on.
+2. Verify this is an AEM Cloud Service project: root `pom.xml` exists and references
+   `com.adobe.aem:aem-sdk-api` or `aem-project-archetype` or contains `<modules>` with
+   typical AEM module names (`core`, `ui.apps`, `dispatcher`, etc.).
+   If not an AEM project → skip.
 
 ## Steps
 
-1. **Check for AGENTS.md**  
-   Look for a file named `AGENTS.md` in the **workspace root** (repository root). If it exists, do nothing and continue with the user's request.
+### 1. Resolve project name
 
-2. **Resolve project name**  
-   Use one of these, in order:
-   - Root `pom.xml`: `<artifactId>` or `<name>` of the root project.
-   - If missing or generic: directory name of the workspace (e.g. `my-aem-project`).
-   - Fallback: `"AEM Cloud Service Project"`.
+Check in order:
+- Root `pom.xml` → `<name>` element (preferred, usually human-readable).
+- Root `pom.xml` → `<artifactId>`, then humanize: strip leading `aem-`, replace `-` with spaces,
+  title-case (e.g. `aem-guides-wknd` → `WKND`, `my-site` → `My Site`).
+- Directory name of the workspace.
+- Fallback: `"AEM Cloud Service Project"`.
 
-3. **Create AGENTS.md**  
-   - Read the template from this skill: [references/AGENTS.md.template](./references/AGENTS.md.template).
-   - Replace the placeholder `{{PROJECT_NAME}}` with the resolved project name (use as the main title, e.g. `# My Project Name`).
-   - Write the result to **AGENTS.md** at the workspace root.
-   - Do not add extra commentary inside AGENTS.md; keep it exactly like the template except for the project name.
+### 2. Discover modules
 
-4. **Then proceed**  
-   After creating AGENTS.md (or if it already existed), continue with whatever the user asked.
+Read root `pom.xml` `<modules>` section. For each `<module>`, confirm the directory actually exists.
+Build a list of present modules.
 
-## Template location
+### 3. Detect add-ons and frontend type
 
-The canonical template is in this skill at:
+Scan the project for:
 
-- `ensure-agents-md/references/AGENTS.md.template`
+| Signal | Add-on / variant |
+|---|---|
+| `pom.xml` depends on `cif-connector` or `aem-core-cif-components` | **CIF (Commerce)** |
+| `ui.frontend/package.json` contains `react` or `@adobe/aem-react-editable-components` | **React SPA** |
+| `ui.frontend/package.json` contains `@angular/core` or `@adobe/aem-angular-editable-components` | **Angular SPA** |
+| `ui.frontend` has no `clientlib.config.js` and pom.xml references `frontend-maven-plugin` but outputs no clientlibs | **Decoupled frontend** |
+| `pom.xml` depends on `aem-forms-*` or `forms.core` | **AEM Forms** |
+| Module `ui.frontend.react.forms.af` exists | **Headless Forms** |
+| `pom.xml` uses `precompiled-scripts-provider` | **Precompiled Scripts** |
 
-Use that content verbatim, replacing only `{{PROJECT_NAME}}` with the customer project name.
+If none of these are detected, treat as **General Webpack** frontend (the default archetype).
 
-## Notes
+### 4. Generate AGENTS.md
 
-- This skill is intended to run automatically when the cloud-service skills are installed (e.g. via aem-guides-wknd or add-skill from the cloud-service plugin). No user action is required to "enable" it.
-- Do not modify an existing AGENTS.md. Only create when the file is missing.
-- Project name should be human-readable (e.g. "My Site" or "wknd"), not only an artifactId like `aem-guides-wknd` unless that is the desired title.
+Read the template at [references/AGENTS.md.template](./references/AGENTS.md.template).
+Apply the following adaptations:
+
+#### a. Title
+Replace `{{PROJECT_NAME}}` with the resolved project name.
+
+#### b. Add-ons section
+If any add-ons were detected (CIF, Forms, Headless Forms, Precompiled Scripts), insert an
+**"Add-ons and extensions"** section after the intro paragraph. Use descriptions from the
+[references/module-catalog.md](./references/module-catalog.md) add-ons table. If none detected, omit
+the section entirely.
+
+#### c. Modules section
+Only include modules that **actually exist** in the project. For each module, use the matching
+description from the [module catalog](./references/module-catalog.md). Pay attention to:
+- `ui.frontend` — use the variant that matches the detected frontend type (General, React, Angular, Decoupled).
+- `dispatcher` — only include if the `dispatcher` directory exists.
+- `it.tests` / `ui.tests` — only include if they exist.
+
+#### d. Build commands
+- Include frontend commands (`npm run build`, `npm start`) only if `ui.frontend` exists.
+- Include dispatcher validate command only if `dispatcher` module exists.
+- For React/Angular SPA, note that `npm start` requires AEM running.
+
+#### e. Dispatcher MCP section
+Only include the "Dispatcher MCP" section if dispatcher skills are installed in the workspace
+(i.e. `.claude/skills/dispatcher/` or `.cursor/skills/dispatcher/` directory exists). Otherwise omit.
+
+#### f. Important resources
+Always include the base resources from the template. Additionally:
+- If React or Angular SPA detected → add SPA Editor and framework-specific resources (see module catalog).
+- If CIF detected → add Commerce resources.
+- If Forms detected → add Forms resources.
+- If Decoupled frontend → add Frontend Pipeline resource.
+
+### 5. Create CLAUDE.md
+
+If `CLAUDE.md` does not exist at the workspace root, create it with this exact content:
+
+```
+@AGENTS.md
+```
+
+This ensures Claude Code / Claude-based tools also discover the project guidance.
+
+### 6. Inform the user
+
+Briefly tell the user:
+> "I created `AGENTS.md` and `CLAUDE.md` in your project root with guidance tailored to your project structure. These help AI coding agents understand your project."
+
+Then continue with the user's original request.
+
+## Reference files
+
+| File | Purpose |
+|---|---|
+| [references/AGENTS.md.template](./references/AGENTS.md.template) | Base template with `{{PROJECT_NAME}}` placeholder and all default sections |
+| [references/module-catalog.md](./references/module-catalog.md) | Module descriptions, add-on descriptions, conditional resources — the source of truth for adapting the template |
+
+## Rules
+
+- **Never overwrite** an existing `AGENTS.md` or `CLAUDE.md`.
+- **Never hallucinate modules**. Only list modules whose directories actually exist.
+- Keep the generated AGENTS.md clean — no skill metadata, no comments about "generated by skill".
+- The resource links must point to `experienceleague.adobe.com/en/docs/experience-manager-cloud-service/...`
+  (Cloud Service URLs), never to AEM 6.5 URLs.

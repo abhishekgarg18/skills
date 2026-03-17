@@ -77,6 +77,3 @@ Note: there are significant architectural differences between AEM as a Cloud Ser
 - [WCM.io AEM Mocks](https://wcm.io/testing/aem-mock/)
 - [Sling Mocks](https://sling.apache.org/documentation/development/sling-mock.html)
 - [Validating and Debugging using Dispatcher Tools](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/content-delivery/validation-debug)
-- [AEM Forms Overview](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/forms/forms-overview/home)
-- [Forms Core Components](https://github.com/adobe/aem-core-forms-components)
-- [Form builder: Create forms with core components](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/forms/adaptive-forms-authoring/authoring-adaptive-forms-core-components/create-an-adaptive-form-on-forms-cs/creating-adaptive-form-core-components)
