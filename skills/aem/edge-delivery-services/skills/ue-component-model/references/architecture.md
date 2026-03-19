@@ -124,3 +124,79 @@ The pipeline auto-detects content types:
 - Values matching URL patterns (`https://`, `#`) → `<a href="...">`
 - Values starting with HTML tags → rendered as rich text
 - Multi-value properties → comma-separated or `<ul><li>` lists
+
+## RTE Filter Configuration
+
+Filters can include an `rte` property to configure the richtext editor toolbar for components using that filter. This controls which formatting options are available to authors when editing richtext fields.
+
+### Toolbar Categories
+
+The `toolbar` property organizes actions into category groups:
+
+| Category | Available actions | Notes |
+|----------|------------------|-------|
+| `format` | `bold`, `italic`, `underline`, `strike` / `strikethrough` | `strike` and `strikethrough` are aliases. Optional `tag` property overrides HTML element. |
+| `blocks` | `h1`-`h6`, `paragraph`, `code_block` | Block-level formatting |
+| `list` | `bullet_list` / `bullist`, `ordered_list` / `numlist` | Aliases: `bullet_list`=`bullist`, `ordered_list`=`numlist`. Optional `wrapInParagraphs`. |
+| `insert` | `link`, `table`, `image`, `unlink` | `link` supports `disableForImages`, `hideTarget`. `image` supports `wrapInPicture`. |
+| `alignment` | `left`, `right`, `center`, `justify`, `alignleft`, `alignright`, `aligncenter`, `alignjustify` | Short and prefixed forms are both valid |
+| `indentation` | `indent`, `outdent` | Block indentation |
+| `sr_script` | `superscript`, `subscript` | Superscript/subscript formatting |
+| `direction` | `ltr`, `rtl` | Text direction |
+| `editor` | `removeformat`, `paste_text`, `fullscreen` | Editor utility actions |
+| `advanced` | (custom items) | For custom toolbar extensions |
+| `dropdowns` | (custom items) | Custom dropdown menus |
+| `sections` | (custom items) | Custom toolbar sections |
+| `extensions` | (custom items) | Custom toolbar extensions |
+
+Each action supports these common options:
+- `hideInline` (boolean) — hide from inline toolbar
+- `label` (string) — custom button label
+- `shortcut` (string) — keyboard shortcut
+
+### Top-Level RTE Properties
+
+| Property | Required | Description |
+|----------|----------|-------------|
+| `toolbar` | Yes | Toolbar category configuration (object, string, or boolean) |
+| `plugins` | Yes | Space-separated list of enabled plugins |
+| `icons` | Yes | Icon set name |
+| `icons_url` | Yes | URL to icon set JS |
+| `skin_url` | Yes | URL to editor skin |
+| `inline` | No | Whether editor is inline |
+| `menubar` | No | Show/hide menu bar |
+| `statusbar` | No | Show/hide status bar |
+| `toolbar_sticky` | No | Sticky toolbar on scroll |
+| `toolbar_sticky_offset` | No | Offset for sticky toolbar |
+| `toolbar_location` | No | Toolbar position |
+| `content_css` | No | Custom CSS for editor content |
+| `content_style` | No | Inline CSS for editor content |
+| `min_width` | No | Minimum editor width |
+| `unsupportedHtml` | No | Allow unsupported HTML |
+| `selector` | No | CSS selector for the editor |
+| `labels` | No | Custom labels (key-value object) |
+| `advlist_bullet_styles` | No | Bullet list style options |
+| `advlist_number_styles` | No | Numbered list style options |
+
+### Example: Filter with RTE Configuration
+
+```json
+{
+  "id": "section",
+  "components": ["text", "image", "hero"],
+  "rte": {
+    "toolbar": {
+      "format": ["bold", "italic", "underline"],
+      "blocks": ["h2", "h3", "h4", "paragraph"],
+      "list": ["bullet_list", "ordered_list"],
+      "insert": ["link", "image"]
+    },
+    "plugins": "link lists image",
+    "icons": "thin",
+    "icons_url": "/icons/thin/icons.js",
+    "skin_url": "/skins/oxide"
+  }
+}
+```
+
+> **Schema reference:** [filter-definition-rte.schema.json](https://universal-editor-service.adobe.io/schemas/filter-definition-rte.schema.json)
