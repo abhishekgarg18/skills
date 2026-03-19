@@ -92,6 +92,22 @@ The `create-component` skill creates complete AEM components following Adobe bes
 
 See `skills/aem/cloud-service/skills/create-component/` for the skill and its reference files.
 
+### AEM as a Cloud Service — Ensure AGENTS.md (bootstrap)
+
+The `ensure-agents-md` skill is a **bootstrap skill** that runs first, before any other work. When a
+customer opens their AEM Cloud Service project and asks the agent anything, this skill checks whether
+`AGENTS.md` exists at the repo root. If missing, it:
+
+- Reads root `pom.xml` to resolve the project name and discover actual modules
+- Detects add-ons (CIF, Forms, SPA type, precompiled scripts)
+- Generates a tailored `AGENTS.md` with only the modules that exist, correct frontend variant, conditional
+  Dispatcher MCP section, and the right resource links
+- Creates `CLAUDE.md` (`@AGENTS.md`) so Claude-based tools also discover the guidance
+
+If `AGENTS.md` already exists it is never overwritten.
+
+See `skills/aem/cloud-service/skills/ensure-agents-md/` for the skill, template, and module catalog.
+
 ### AEM Dispatcher
 
 Dispatcher skills are split by runtime flavor to avoid mode auto-detection and keep installation explicit.
@@ -120,12 +136,34 @@ skills/
     |   |-- .claude-plugin/
     |   |   \-- plugin.json
     |   \-- skills/
+    |       |-- ensure-agents-md/
+    |       |   |-- SKILL.md          <-- bootstrap: creates AGENTS.md + CLAUDE.md if missing
+    |       |   \-- references/
+    |       |       |-- AGENTS.md.template
+    |       |       \-- module-catalog.md
     |       |-- create-component/
     |       |   |-- SKILL.md          <-- discovered by npx skills
+    |       |   |-- .claude-plugin/
+    |       |   |   \-- plugin.json
     |       |   |-- assets/
+    |       |   |   \-- field-type-mappings.md
     |       |   \-- references/
+    |       |       |-- aem-conventions.md
+    |       |       |-- dialog-patterns.md
+    |       |       |-- htl-patterns.md
+    |       |       |-- model-patterns.md
+    |       |       |-- java-standards.md
+    |       |       |-- clientlib-patterns.md
+    |       |       |-- extending-core-components.md
+    |       |       |-- sling-servlet-standards.md
+    |       |       |-- core-components.md
+    |       |       |-- test-patterns.md
+    |       |       |-- no-hallucination-rules.md
+    |       |       \-- examples.md
     |       \-- dispatcher/
     |           |-- SKILL.md          <-- discovered by npx skills (router)
+    |           |-- .claude-plugin/
+    |           |   \-- plugin.json
     |           |-- config-authoring/
     |           |   |-- SKILL.md      <-- specialist (bundled inside dispatcher)
     |           |   \-- references/
