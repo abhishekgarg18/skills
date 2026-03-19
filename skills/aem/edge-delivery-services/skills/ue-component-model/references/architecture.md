@@ -2,7 +2,7 @@
 
 ## The Three Files
 
-An AEM Edge Delivery Services (EDS) project using the Universal Editor (UE) requires three JSON configuration files at the project root:
+An AEM Edge Delivery Services (aem.live) project using the Universal Editor (UE) requires three JSON configuration files at the project root:
 
 1. **component-definition.json** — Registers components in the UE palette (what authors can add)
 2. **component-models.json** — Defines the property panel fields (what authors can configure)
