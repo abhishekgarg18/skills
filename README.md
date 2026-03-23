@@ -27,14 +27,14 @@ Repository of Adobe skills for AI coding agents.
 npx skills add https://github.com/adobe/skills/tree/main/skills/aem/edge-delivery-services --all
 
 # Install all AEM as a Cloud Service skills (create-component + dispatcher) in one command
-npx skills add https://github.com/adobe/skills/tree/main/skills/aem/cloud-service --all
+npx skills add https://github.com/adobe/skills/tree/beta/skills/aem/cloud-service --all
 
 # Install all AEM 6.5 LTS skills (dispatcher) in one command
-npx skills add https://github.com/adobe/skills/tree/main/skills/aem/6.5-lts --all
+npx skills add https://github.com/adobe/skills/tree/beta/skills/aem/6.5-lts --all
 
 # Install for a single agent (pick ONE flavor only)
-npx skills add https://github.com/adobe/skills/tree/main/skills/aem/cloud-service --all -a cursor -y
-npx skills add https://github.com/adobe/skills/tree/main/skills/aem/6.5-lts --all -a cursor -y
+npx skills add https://github.com/adobe/skills/tree/beta/skills/aem/cloud-service -a cursor -y
+npx skills add https://github.com/adobe/skills/tree/beta/skills/aem/6.5-lts -a cursor -y
 
 # Install specific skill(s)
 npx skills add adobe/skills -s content-driven-development
@@ -42,8 +42,8 @@ npx skills add adobe/skills -s content-driven-development building-blocks testin
 
 # List available skills
 npx skills add adobe/skills --list
-npx skills add https://github.com/adobe/skills/tree/main/skills/aem/cloud-service --list
-npx skills add https://github.com/adobe/skills/tree/main/skills/aem/6.5-lts --list
+npx skills add https://github.com/adobe/skills/tree/beta/skills/aem/cloud-service --list
+npx skills add https://github.com/adobe/skills/tree/beta/skills/aem/6.5-lts --list
 ```
 
 ### upskill (GitHub CLI Extension)
