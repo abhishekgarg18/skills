@@ -73,6 +73,31 @@ jobs:
             done
 
             DIRS=$(echo "$DIRS" | xargs)  # trim whitespace
+
+            # Check for unmatched changes under skills/
+            UNMATCHED=false
+            for changed_file in $CHANGED_FILES; do
+              case "$changed_file" in
+                skills/*)
+                  MATCHED=false
+                  for tile_dir in $ALL_TILE_DIRS; do
+                    case "$changed_file" in
+                      "$tile_dir"/*) MATCHED=true; break ;;
+                    esac
+                  done
+                  if [ "$MATCHED" = "false" ]; then
+                    UNMATCHED=true
+                    break
+                  fi
+                  ;;
+              esac
+            done
+
+            if [ "$UNMATCHED" = "true" ]; then
+              echo "Unmatched changes under skills/ detected — evaluating all tiles"
+              DIRS=$(find skills -name tile.json -exec dirname {} \; 2>/dev/null | tr "\n" " " | xargs)
+            fi
+
             if [ -z "$DIRS" ]; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
               echo "Changed files don't belong to any tile — nothing to eval."

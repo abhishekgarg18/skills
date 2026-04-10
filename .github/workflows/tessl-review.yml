@@ -43,6 +43,31 @@ jobs:
             done
 
             DIRS=$(echo "$DIRS" | xargs)  # trim whitespace
+
+            # Check for unmatched changes under skills/
+            UNMATCHED=false
+            for changed_file in $CHANGED_FILES; do
+              case "$changed_file" in
+                skills/*)
+                  MATCHED=false
+                  for skill_dir in $ALL_SKILL_DIRS; do
+                    case "$changed_file" in
+                      "$skill_dir"/*) MATCHED=true; break ;;
+                    esac
+                  done
+                  if [ "$MATCHED" = "false" ]; then
+                    UNMATCHED=true
+                    break
+                  fi
+                  ;;
+              esac
+            done
+
+            if [ "$UNMATCHED" = "true" ]; then
+              echo "Unmatched changes under skills/ detected — reviewing all skills"
+              DIRS=$(find skills -name SKILL.md -exec dirname {} \; 2>/dev/null | tr "\n" " " | xargs)
+            fi
+
             if [ -z "$DIRS" ]; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
               echo "No skill files changed."
