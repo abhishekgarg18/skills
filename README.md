@@ -7,56 +7,31 @@ Repository of Adobe skills for AI coding agents.
 ### Claude Code Plugins
 
 ```bash
-# Add the Adobe Skills marketplace
 /plugin marketplace add adobe/skills
-
-# Install AEM Edge Delivery Services plugin (all 17 skills)
 /plugin install aem-edge-delivery-services@adobe-skills
-
-# Install AEM Project Management plugin (6 skills)
 /plugin install aem-project-management@adobe-skills
 ```
 
 ### Vercel Skills (npx skills)
 
 ```bash
-# Install all AEM Edge Delivery Services skills
-npx skills add https://github.com/adobe/skills/tree/main/skills/aem/edge-delivery-services --all
-
-# Install specific skill(s)
-npx skills add adobe/skills -s content-driven-development
-npx skills add adobe/skills -s content-driven-development building-blocks testing-blocks
-
-# Install all Adobe skills (all products)
 npx skills add adobe/skills --all
-
-# List available skills
-npx skills add adobe/skills --list
 ```
 
 ### upskill (GitHub CLI Extension)
 
 ```bash
-gh extension install trieloff/gh-upskill
-
-# Install all skills from this repo
+gh extension install ai-ecoverse/gh-upskill
 gh upskill adobe/skills --all
-
-# Install only AEM Edge Delivery Services skills
-gh upskill adobe/skills --path skills/aem/edge-delivery-services --all
-
-# Install a specific skill
-gh upskill adobe/skills --path skills/aem/edge-delivery-services --skill content-driven-development
-
-# List available skills in a subfolder
-gh upskill adobe/skills --path skills/aem/edge-delivery-services --list
 ```
 
 ## Available Skills
 
-### AEM Edge Delivery Services
+### For Business
 
-#### Core Development
+#### Adobe Experience Manager
+
+##### Developing with Edge Delivery Services
 
 | Skill | Description |
 |-------|-------------|
@@ -67,7 +42,7 @@ gh upskill adobe/skills --path skills/aem/edge-delivery-services --list
 | `content-modeling` | Design author-friendly content models |
 | `code-review` | Self-review and PR review |
 
-#### Discovery
+##### Discovering Blocks
 
 | Skill | Description |
 |-------|-------------|
@@ -76,7 +51,7 @@ gh upskill adobe/skills --path skills/aem/edge-delivery-services --list
 | `docs-search` | Search aem.live documentation |
 | `find-test-content` | Find existing content for testing |
 
-#### Migration
+##### Migrating Content
 
 | Skill | Description |
 |-------|-------------|
@@ -88,26 +63,9 @@ gh upskill adobe/skills --path skills/aem/edge-delivery-services --list
 | `generate-import-html` | Generate structured HTML |
 | `preview-import` | Preview imported content |
 
-### AEM Project Management
+##### Managing Projects
 
-Project lifecycle management for AEM Edge Delivery Services including handover documentation, PDF generation, and authentication.
-
-> **Requirement:** This plugin is exclusively for AEM Edge Delivery Services projects. It validates projects by checking for `scripts/aem.js`. For non-Edge Delivery projects, the plugin exits early — use standard documentation approaches instead.
-
-**Quick Start:**
-```bash
-cd your-edge-delivery-project   # or any subdirectory within it
-# Say: "create handover documentation for this project"
-```
-
-**Setup:** You will be prompted for your Config Service organization name (the `{org}` in `https://main--site--{org}.aem.page`). A browser window will open for authentication — sign in and **close the browser window** to continue.
-
-**Permissions:** Admin access to the project organization is required. The plugin queries the Config Service API to gather project configuration, site settings, and access controls for comprehensive documentation.
-
-**Output:** Professional PDFs generated in `project-guides/` folder:
-- `project-guides/AUTHOR-GUIDE.pdf` - For content authors
-- `project-guides/DEVELOPER-GUIDE.pdf` - For developers
-- `project-guides/ADMIN-GUIDE.pdf` - For administrators
+Handover documentation and PDF generation for AEM Edge Delivery Services projects.
 
 | Skill | Description |
 |-------|-------------|
@@ -118,6 +76,10 @@ cd your-edge-delivery-project   # or any subdirectory within it
 | `whitepaper` | Create professional PDF whitepapers from Markdown |
 | `auth` | Authenticate with AEM Config Service API |
 
+### Creativity & Design
+
+_Coming soon._
+
 ## Repository Structure
 
 ```
@@ -125,26 +87,10 @@ skills/
 └── aem/
     ├── edge-delivery-services/
     │   ├── .claude-plugin/
-    │   │   └── plugin.json
     │   └── skills/
-    │       ├── content-driven-development/
-    │       ├── building-blocks/
-    │       └── ...
     └── project-management/
         ├── .claude-plugin/
-        │   └── plugin.json
-        ├── fonts/
-        ├── hooks/
-        │   └── pdf-lifecycle.js
-        ├── templates/
-        │   └── whitepaper.typ
         └── skills/
-            ├── handover/
-            ├── authoring/
-            ├── development/
-            ├── admin/
-            ├── whitepaper/
-            └── auth/
 ```
 
 ## Contributing
@@ -161,4 +107,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on adding or updating skil
 
 ## License
 
-Apache 2.0 - see [LICENSE](LICENSE) for details.
+Apache 2.0 — see [LICENSE](LICENSE) for details.
