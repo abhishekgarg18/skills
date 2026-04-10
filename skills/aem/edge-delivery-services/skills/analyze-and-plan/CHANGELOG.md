@@ -1,3 +1,5 @@
+## [1.0.1](https://github.com/adobe/skills/compare/analyze-and-plan-v1.0.0...analyze-and-plan-v1.0.1) (2026-04-10)
+
 # 1.0.0 (2026-04-10)
 
 
