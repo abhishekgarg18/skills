@@ -1,159 +1,367 @@
 # AEM as a Cloud Service Content Distribution Skills
 
-Comprehensive content distribution skills for Adobe Experience Manager as a Cloud Service, covering content publishing, Preview tier management, Sling Content Distribution API, CDN cache management, and troubleshooting.
+Programmatic content publishing and distribution monitoring for Adobe Experience Manager as a Cloud Service.
+
+## Overview
+
+These skills cover the official APIs for content replication and distribution event handling in AEM Cloud Service:
+
+1. **Replication API** (`com.day.cq.replication`) - Programmatic content publishing
+2. **Sling Distribution Events** (`org.apache.sling.distribution.event`) - Distribution lifecycle monitoring
+
+## Official Documentation
+
+- **Replication API Javadoc**: https://developer.adobe.com/experience-manager/reference-materials/cloud-service/javadoc/com/day/cq/replication/package-summary.html
+- **Sling Distribution Javadoc**: https://developer.adobe.com/experience-manager/reference-materials/cloud-service/javadoc/org/apache/sling/distribution/package-summary.html
+- **Adobe Replication Guide**: https://experienceleague.adobe.com/docs/experience-manager-cloud-service/content/operations/replication.html
 
 ## Skills Included
 
-### 1. Publish Content
-Publish content to Publish and Preview tiers using Cloud Service publishing workflows.
+### 1. Replication API (`replication/SKILL.md`)
 
-**Key capabilities:**
-- Quick Publish for simple activation
-- Manage Publication with Preview tier support
-- Publish to Preview for content review
-- Tree Activation with tier selection
-- Scheduled publishing with timezone support
-- Unpublish from Publish or Preview tiers
-- Content Fragments and Experience Fragments publishing
+Use the official AEM Replication API to programmatically publish and unpublish content.
 
-**Typical use cases:**
-- Daily content publishing operations
-- Marketing campaign launches with Preview review
-- Scheduled content releases
-- Bulk content publishing
-- Content preview before production
+**What it covers**:
+- `Replicator` service usage with code examples
+- Publishing to Publish and Preview tiers
+- Bulk replication (with rate limits)
+- `ReplicationOptions` for advanced configuration
+- Replication status checks
+- Permission validation
+- Workflow integration
+- Event handling for replication events
 
-### 2. Preview Tier Management
-Manage the Preview tier for content review, testing, and stakeholder approval.
-
-**Key capabilities:**
-- Preview publishing workflows
-- Preview URL structure and access
-- Preview-specific testing (UAT, QA)
-- Preview to Publish promotion
-- Preview content cleanup
-- Preview analytics and tracking
-
-**Typical use cases:**
-- Stakeholder content review
-- UAT and QA testing
-- Marketing campaign preview
-- Content approval workflows
-- A/B testing preparation
-
-### 3. Content Distribution API
-Use Cloud Service APIs and event handling for programmatic content distribution.
-
-**Key capabilities:**
-- Sling Content Distribution patterns
-- Replication event handlers
-- Custom workflow integration
-- Bulk operations
-- Content Package API
-- Publication status queries
-- Complete Java code examples
-
-**Typical use cases:**
-- Custom OSGi services
+**When to use**:
+- Custom OSGi services that publish content
 - Workflow process steps
-- Bulk content operations
-- External system integration
 - Automated publishing pipelines
+- Integration with external systems
 
-### 4. Troubleshoot Distribution
-Diagnose and fix content distribution issues in Cloud Service environments.
+**Official API**: `com.day.cq.replication.Replicator`
 
-**Key capabilities:**
-- Stuck content diagnosis
-- CDN cache issue resolution
-- Publication delay troubleshooting
-- Preview tier issues
-- Sling job queue management
-- Permission issues
+### 2. Sling Distribution Event Handling (`sling-distribution/SKILL.md`)
 
-**Typical use cases:**
-- Production incidents
-- Content not appearing on Publish/Preview
-- Slow content distribution
-- CDN cache staleness
-- Permission and access issues
+Monitor and react to content distribution lifecycle events.
 
-### 5. Content Distribution Orchestrator
-Coordinates end-to-end workflows spanning multiple sub-skills.
+**What it covers**:
+- Distribution event topics (package created, queued, distributed, dropped, imported)
+- Event properties and metadata
+- OSGi event handler examples
+- Common use cases (alerting, cache warming, analytics)
+- Queue monitoring patterns
+- Distribution request types
 
-**Key capabilities:**
-- Go-live preparation workflows
-- Production incident response
-- CDN optimization strategies
+**When to use**:
+- Monitor distribution lifecycle
+- Trigger post-distribution actions (cache warming, notifications)
+- Distribution auditing and logging
+- Handle distribution failures
+- Integration workflows
 
-**Typical use cases:**
-- New site go-live
-- Environment setup
-- Performance optimization
+**Official API**: `org.apache.sling.distribution.event`
 
-## Key Features
+## How They Work Together
 
-### Preview Tier Native Support
-Unlike AEM 6.5 LTS, Cloud Service has a native **Preview tier** for content review:
-- Publish to Preview before Publish
-- Stakeholder review on Preview tier
-- Preview-specific URLs for testing
-- Preview analytics integration
+### Architecture
 
-### Automatic Content Distribution
-No manual replication agent configuration:
-- Sling Content Distribution (automatic)
-- Managed by Adobe platform
-- Transparent to content authors
-- Scales automatically
+```
+┌─────────────────────────────────────────────────────────┐
+│ Your Code: Replication API                              │
+│ replicator.replicate(session, ACTIVATE, "/content/...") │
+└──────────────────────┬──────────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────┐
+│ Sling Distribution: Underlying Transport                │
+│                                                          │
+│ [AGENT_PACKAGE_CREATED]   ← Event fires                 │
+│         ↓                                                │
+│ [AGENT_PACKAGE_QUEUED]    ← Event fires                 │
+│         ↓                                                │
+│ [AGENT_PACKAGE_DISTRIBUTED] ← Event fires               │
+│         ↓                                                │
+│ Adobe Developer Pipeline Service                        │
+│         ↓                                                │
+│ [IMPORTER_PACKAGE_IMPORTED] ← Event fires on target     │
+└─────────────────────────────────────────────────────────┘
+                       ↓
+              Content is live on Publish/Preview
+```
 
-### Integrated CDN
-Adobe-managed CDN with automatic cache management:
-- Automatic cache invalidation
-- Fast content delivery
-- Global edge network
-- Purge API for custom rules
+### Workflow Example
 
-### Modern APIs
-Cloud Service uses different APIs than 6.5 LTS:
-- Sling Content Distribution events (replaces Replication API)
-- Publication API for programmatic publishing
-- Event-driven architecture
-- OSGi event handlers
+**Scenario**: Publish a page and warm the CDN cache after distribution completes.
 
-## Documentation Sources
+**Step 1**: Use Replication API to publish:
+```java
+@Reference
+private Replicator replicator;
 
-All skills are based on official Adobe AEM as a Cloud Service documentation:
+// Publish content
+replicator.replicate(session, ReplicationActionType.ACTIVATE, "/content/mysite/en/page");
+```
 
-- **Content Distribution**: https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/operations/replication
-- **Managing Publication**: https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/sites/authoring/sites-console/publishing-pages
-- **Preview Tier**: https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/using-cloud-manager/manage-environments
-- **CDN**: https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/content-delivery/cdn
+**Step 2**: Listen for distribution completion:
+```java
+@Component(
+    service = EventHandler.class,
+    property = {
+        org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+            DistributionEventTopics.IMPORTER_PACKAGE_IMPORTED
+    }
+)
+public class CacheWarmingHandler implements EventHandler {
+    
+    @Override
+    public void handleEvent(Event event) {
+        String[] paths = (String[]) event.getProperty(
+            DistributionEventProperties.DISTRIBUTION_PATHS
+        );
+        
+        for (String path : paths) {
+            warmCache(path);  // Custom cache warming logic
+        }
+    }
+}
+```
 
-## Architecture Differences: 6.5 LTS vs Cloud Service
+## Key Differences from AEM 6.x
 
-| Aspect | AEM 6.5 LTS | AEM as a Cloud Service |
-|--------|-------------|------------------------|
-| **Distribution** | Replication agents | Sling Content Distribution (automatic) |
-| **Configuration** | Manual agent setup | Managed by Adobe |
-| **Tiers** | Author, Publish | Author, Preview, Publish |
-| **CDN** | Optional external | Integrated Adobe CDN |
-| **Cache Invalidation** | Dispatcher Flush agents | Automatic CDN purge |
-| **API** | `com.day.cq.replication.*` | Sling Distribution events |
-| **Preview** | Not available | Native Preview tier |
+| Aspect | AEM 6.x | AEM Cloud Service |
+|--------|---------|-------------------|
+| **Replication API** | `com.day.cq.replication.Replicator` | ✅ Same API available |
+| **Transport** | Direct JCR replication | Sling Distribution via Adobe Developer pipeline |
+| **Agents** | Manual configuration | Automatic (managed by Adobe) |
+| **Preview Tier** | Not available | Available with agent filtering |
+| **Distribution Events** | Limited | Full lifecycle events via `org.apache.sling.distribution.event` |
 
-## Getting Started
+## Rate Limits and Constraints
 
-1. **For content authors**: Start with [Publish Content](./publish-content/SKILL.md)
-2. **For preview workflows**: Use [Preview Tier Management](./preview-tier/SKILL.md)
-3. **For developers**: Reference [Content Distribution API](./distribution-api/SKILL.md)
-4. **For troubleshooting**: Consult [Troubleshoot Distribution](./troubleshoot-distribution/SKILL.md)
-5. **For end-to-end workflows**: Use [Content Distribution Orchestrator](./orchestrator/SKILL.md)
+### Replication API Limits
 
-## Total Documentation
+| Constraint | Limit |
+|-----------|-------|
+| Paths per API call (recommended) | 100 |
+| Paths per API call (hard limit) | 500 |
+| Transactional guarantee | ≤100 paths only |
+| Payload size | 10 MB maximum |
 
-- **5 comprehensive skills**
-- **Cloud Service-specific patterns**
-- **Preview tier workflows**
-- **CDN integration guidance**
-- **100% based on official Adobe Cloud Service documentation**
+### Best Practices
+
+1. **Respect rate limits**: ≤100 paths per call for transactional guarantee
+2. **Use workflow for large operations**: Tree Activation workflow step for >500 paths
+3. **Handle failures gracefully**: Always catch `ReplicationException`
+4. **Use service users**: Never replicate with admin credentials
+5. **Publish only what's needed**: Avoid unnecessary bulk operations
+6. **Monitor events**: Use Sling Distribution events for observability
+
+## Common Use Cases
+
+### Use Case 1: Auto-Publish Content Fragments
+
+```java
+// Listen for content fragment changes
+@Component(service = EventHandler.class, property = {
+    org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+        SlingConstants.TOPIC_RESOURCE_CHANGED
+})
+public class AutoPublishHandler implements EventHandler {
+    
+    @Reference
+    private Replicator replicator;
+    
+    @Override
+    public void handleEvent(Event event) {
+        String path = (String) event.getProperty(SlingConstants.PROPERTY_PATH);
+        
+        if (isContentFragment(path)) {
+            try (ResourceResolver resolver = getServiceResolver()) {
+                Session session = resolver.adaptTo(Session.class);
+                replicator.replicate(session, ReplicationActionType.ACTIVATE, path);
+            } catch (Exception e) {
+                LOG.error("Auto-publish failed", e);
+            }
+        }
+    }
+}
+```
+
+### Use Case 2: Alert on Distribution Failures
+
+```java
+// Monitor for dropped packages
+@Component(service = EventHandler.class, property = {
+    org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+        DistributionEventTopics.AGENT_PACKAGE_DROPPED
+})
+public class FailureAlertHandler implements EventHandler {
+    
+    @Override
+    public void handleEvent(Event event) {
+        String packageId = (String) event.getProperty(
+            DistributionEventProperties.DISTRIBUTION_PACKAGE_ID
+        );
+        String[] paths = (String[]) event.getProperty(
+            DistributionEventProperties.DISTRIBUTION_PATHS
+        );
+        
+        LOG.error("Distribution failed: packageId={}, paths={}", 
+            packageId, String.join(",", paths));
+        
+        // Send alert to operations team
+        alertService.sendAlert("Distribution failure", packageId);
+    }
+}
+```
+
+### Use Case 3: CDN Cache Warming
+
+```java
+// Warm cache after successful distribution
+@Component(service = EventHandler.class, property = {
+    org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+        DistributionEventTopics.IMPORTER_PACKAGE_IMPORTED
+})
+public class CacheWarmingHandler implements EventHandler {
+    
+    @Override
+    public void handleEvent(Event event) {
+        String[] paths = (String[]) event.getProperty(
+            DistributionEventProperties.DISTRIBUTION_PATHS
+        );
+        
+        for (String path : paths) {
+            String url = convertToPublicUrl(path);
+            httpClient.execute(new HttpGet(url));  // Warm cache
+        }
+    }
+}
+```
+
+### Use Case 4: Publish to Preview for Approval Workflow
+
+```java
+// Workflow step: Publish to Preview for review
+@Component(service = WorkflowProcess.class, property = {
+    "process.label=Publish to Preview for Review"
+})
+public class PublishToPreviewStep implements WorkflowProcess {
+    
+    @Reference
+    private Replicator replicator;
+    
+    @Override
+    public void execute(WorkItem workItem, WorkflowSession workflowSession, 
+                       MetaDataMap args) throws WorkflowException {
+        
+        String payloadPath = workItem.getWorkflowData().getPayload().toString();
+        Session session = workflowSession.adaptTo(Session.class);
+        
+        // Create options to target Preview tier
+        ReplicationOptions options = new ReplicationOptions();
+        options.setFilter(agent -> "preview".equals(agent.getId()));
+        
+        try {
+            replicator.replicate(
+                session,
+                ReplicationActionType.ACTIVATE,
+                payloadPath,
+                options
+            );
+        } catch (ReplicationException e) {
+            throw new WorkflowException("Failed to publish to Preview", e);
+        }
+    }
+}
+```
+
+## Quick Reference
+
+### Replication API - Key Classes
+
+```java
+// Inject the service
+@Reference
+private Replicator replicator;
+
+// Single path
+replicator.replicate(session, ReplicationActionType.ACTIVATE, "/content/page");
+
+// Multiple paths
+replicator.replicate(session, ReplicationActionType.ACTIVATE, 
+    new String[]{"/content/page1", "/content/page2"}, null);
+
+// With options
+ReplicationOptions options = new ReplicationOptions();
+options.setFilter(agent -> "preview".equals(agent.getId()));
+replicator.replicate(session, ReplicationActionType.ACTIVATE, "/content/page", options);
+
+// Check status
+ReplicationStatus status = replicator.getReplicationStatus(session, "/content/page");
+boolean isPublished = status != null && status.isActivated();
+```
+
+### Distribution Events - Key Topics
+
+```java
+// Listen for events
+@Component(service = EventHandler.class, property = {
+    org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+        DistributionEventTopics.AGENT_PACKAGE_CREATED,
+    org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+        DistributionEventTopics.AGENT_PACKAGE_QUEUED,
+    org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+        DistributionEventTopics.AGENT_PACKAGE_DISTRIBUTED,
+    org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+        DistributionEventTopics.AGENT_PACKAGE_DROPPED,
+    org.osgi.service.event.EventConstants.EVENT_TOPIC + "=" + 
+        DistributionEventTopics.IMPORTER_PACKAGE_IMPORTED
+})
+public class MyDistributionHandler implements EventHandler {
+    
+    @Override
+    public void handleEvent(Event event) {
+        String packageId = (String) event.getProperty(
+            DistributionEventProperties.DISTRIBUTION_PACKAGE_ID
+        );
+        String[] paths = (String[]) event.getProperty(
+            DistributionEventProperties.DISTRIBUTION_PATHS
+        );
+        // Handle event
+    }
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| ReplicationException | Permission denied | Check service user has `crx:replicate` permission |
+| Content not appearing | Wrong tier selected | Verify agent filter targets correct tier (preview vs publish) |
+| Event handler not firing | Wrong event topic | Use exact constants from `DistributionEventTopics` |
+| "Too many paths" error | Exceeded 500 path limit | Batch requests or use Tree Activation workflow |
+
+### Debug Checklist
+
+1. **Replication fails**:
+   - Check logs for `ReplicationException`
+   - Verify user has `crx:replicate` permission on content path
+   - Check Sling jobs console: `/system/console/slingjobs`
+
+2. **Events not firing**:
+   - Verify component is active: `/system/console/components`
+   - Check event topic matches exactly
+   - Verify OSGi event handler properties
+
+3. **Content not on target tier**:
+   - Check replication status: `replicator.getReplicationStatus()`
+   - Verify agent filter targets correct tier
+   - Check distribution logs in Cloud Manager
+
+## References
+
+- **Replication Skill**: [replication/SKILL.md](./replication/SKILL.md)
+- **Sling Distribution Skill**: [sling-distribution/SKILL.md](./sling-distribution/SKILL.md)
+- **Official Javadoc**: https://developer.adobe.com/experience-manager/reference-materials/cloud-service/javadoc/
+- **Adobe Documentation**: https://experienceleague.adobe.com/docs/experience-manager-cloud-service/content/operations/replication.html
