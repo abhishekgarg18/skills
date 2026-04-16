@@ -5,6 +5,7 @@ license: Apache-2.0
 allowed-tools: Read, Write, Edit, Bash
 metadata:
   argument-hint: "[input.md] [output.pdf]"
+  version: "1.0.0"
 ---
 
 # Professional PDF Generator
