@@ -1,6 +1,6 @@
 # OSGi configs: scan → Cloud Manager environment secrets / variables
 
-**Agent:** The parent skill loads this file for prompts such as *“scan my config files and create Cloud Manager environment secrets or variables.”* Users do **not** name this path.
+**Agent:** The parent skill loads this file for prompts such as *"scan my config files and create Cloud Manager environment secrets or variables."* Users do **not** name this path.
 
 The sections below through **Cloud Manager and deployment** reproduce the rules from **Adobe Experience Manager as a Cloud Service** product documentation for configuring OSGi (deploying topic: OSGi configuration with secret and environment-specific values). **Follow them when editing configs or advising on Cloud Manager.**
 
@@ -12,23 +12,35 @@ OSGi manages bundles and their configurations. Settings are defined in **configu
 
 ### Configuration files (`.cfg.json`)
 
-- Configuration changes belong in the project’s code packages (**`ui.config`**) as **`.cfg.json`** files under **runmode-specific** config folders, for example under paths like **`/apps/<appId>/config.<runmode>/`** (in the content tree; in Maven this is commonly under **`ui.config`** / **`osgiconfig`**).
+- Configuration changes belong in the project's code packages (**`ui.config`**) as **`.cfg.json`** files under **runmode-specific** config folders, for example under paths like **`/apps/<appId>/config.<runmode>/`** (in the content tree; in Maven this is commonly under **`ui.config`** / **`osgiconfig`**).
 - The format is **JSON**, using the **`.cfg.json`** format defined by the **Apache Sling** OSGi configuration installer.
 - OSGi configurations target components by **Persistent Identity (PID)**. The PID usually matches the **fully qualified Java class name** of the OSGi component implementation. Example file path:  
   `.../config/com.example.workflow.impl.ApprovalWorkflow.cfg.json`
 - **Factory configurations** use the **`<factoryPID>-<name>.cfg.json`** naming convention.
 
-**Superseded formats:** Older AEM versions allowed **`.cfg`**, **`.config`**, and XML **`sling:OsgiConfig`**. On AEM as a Cloud Service these are **superseded** by **`.cfg.json`**. This skill’s automated edits apply **only** to **`.cfg.json`** after any legacy content is converted elsewhere.
+**Superseded formats:** Older AEM versions allowed **`.cfg`**, **`.config`**, and XML **`sling:OsgiConfig`**. On AEM as a Cloud Service these are **superseded** by **`.cfg.json`**. See **Phase 0 — Legacy format conversion** below for conversion rules.
 
-**Cloud runtime note:** On AEM as a Cloud Service, effective OSGi configuration is not held like a classic on-prem **`/apps`**-only model; use the environment’s **Developer Console** (Status → Configurations in the status dump) to inspect what is applied.
+**Cloud runtime note:** On AEM as a Cloud Service, effective OSGi configuration is not held like a classic on-prem **`/apps`**-only model; use the environment's **Developer Console** (Status → Configurations in the status dump) to inspect what is applied.
 
 ### Runmodes (context for configs)
 
 - **AEM 6.x** allowed **custom runmodes**; **AEM as a Cloud Service does not**. Only the **documented Cloud Service runmode set** applies. Differences between Cloud environments that runmodes cannot express are handled with **OSGi configuration environment variables** (`$[env:…]` / `$[secret:…]`).
-- Runmode-specific folders live under **`/apps/<appId>/`** using names like **`config.<author|publish>.<dev|stage|prod>`** (and combinations such as **`config.author`**, **`config.author.dev`**). Configs apply when the folder’s runmodes **match** the instance.
+- Runmode-specific folders live under **`/apps/<appId>/`** using names like **`config.<author|publish>.<dev|stage|prod>`** (and combinations such as **`config.author`**, **`config.author.dev`**). Configs apply when the folder's runmodes **match** the instance.
 - If **multiple** configs apply to the **same PID**, the one with the **highest number of matching runmodes** wins. Resolution is at **PID** level: you **cannot** split properties for the same PID across two folders—one winning file applies to the **whole** PID.
 - **Preview:** A **`config.preview`** folder is **not** declared like **`config.publish`**. The **preview** tier **inherits** OSGi configuration from **publish**.
 - **Local SDK:** Runmodes can be set at startup, e.g. **`-r publish,dev`** on the quickstart JAR.
+
+**Valid Cloud Service runmode tokens** (exhaustive):
+
+| Token | Meaning |
+|-------|---------|
+| `author` | Author tier |
+| `publish` | Publish tier |
+| `dev` | Development environment |
+| `stage` | Stage environment |
+| `prod` | Production environment |
+
+Valid **folder names** use combinations: `config`, `config.author`, `config.publish`, `config.dev`, `config.stage`, `config.prod`, `config.author.dev`, `config.author.stage`, `config.author.prod`, `config.publish.dev`, `config.publish.stage`, `config.publish.prod`. Any folder whose name does not match one of these (e.g. `config.qa`, `config.integration`, `config.local`, `config.ams`) is **invalid** on Cloud Service.
 
 **Verifying effective config:** In Cloud Service, use **Developer Console** → select **Pod** → **Status** → **Status Dump** → **Configurations** → **Get Status**. Match **`pid`** to the **`.cfg.json`** filename and compare **`properties`** to the repo for the runmode under review.
 
@@ -135,33 +147,162 @@ Secret and env-specific values **live outside Git**. Customers should **govern**
 
 **In scope for automated edits**
 
-- **`.cfg.json` only**, under **`ui.config`** or **`ui.apps/.../jcr_root/...`** where the file’s **parent directory name starts with** `config`.
+- **`.cfg.json`** files under **`ui.config`** or **`ui.apps/.../jcr_root/...`** where the file's **parent directory name starts with** `config`.
+- Legacy **`.cfg`**, **`.config`**, and XML **`sling:OsgiConfig`** nodes — **conversion to `.cfg.json` only** (Phase 0).
 
 **Out of scope for automated edits**
 
-- Legacy **`.cfg`**, **`.config`**, XML OSGi (convert to **`.cfg.json`** first).
 - Repoinit and Adobe-owned OSGi override (see above).
-- Reorganizing runmode folder structure.
+- Reorganizing runmode folder structure (invalid folders are **flagged**, not moved).
 
-**One-prompt workflow**
+---
 
-1. Glob scoped **`.cfg.json`** as above.
-2. For **custom** PIDs only: replace high-confidence **secrets** with **`"$[secret:VAR]"`**; replace eligible **non-secrets** with **`"$[env:VAR]"`** only when Adobe’s rules above allow. Skip ambiguous or Adobe-owned configs → **`needs_user_review`** in the handoff file.
-3. Write gitignored **`cloudmanager-osgi-secrets.local.json`** with **`variables`**: **`name`**, **`value`**, **`cm_type`** (`secretString` | `string`), **`placeholder`**, **`cfg_json_path`**, **`json_property`**; optional **`needs_user_review`**. Respect **200** variables and **2048**-char values.
-4. Do **not** print secret values in chat. Remind user: set CM variables, then **delete** the handoff file; **git history** may still contain old secrets.
+### Phase 0 — Legacy format conversion
 
-### Handoff file (security)
+Glob for **`.cfg`**, **`.config`**, and **`.xml`** files under config folders (same scope as `.cfg.json`). For each legacy file found, convert it to `.cfg.json` and **delete** the original.
 
-- Filename suggestion: **`cloudmanager-osgi-secrets.local.json`** at AEM repo root.
-- Include **`_do_not_commit`** warning; add **`.gitignore`** entry if missing.
-- User deletes file after Cloud Manager is updated.
+**`.cfg` (Java properties format)**
+
+Line-based `key=value` (or `key = value`). Lines starting with `#` or `!` are comments. Multi-line values use trailing `\`. Convert:
+
+```properties
+# .cfg file
+server.url=https://example.com
+connection.timeout=1000
+enabled=true
+```
+
+→
+
+```json
+{
+  "server.url": "https://example.com",
+  "connection.timeout": 1000,
+  "enabled": true
+}
+```
+
+Rules: unquoted numeric values → JSON numbers; `true`/`false` → JSON booleans; everything else → JSON strings. Preserve the PID from the filename.
+
+**`.config` (Apache Felix format)**
+
+Similar to `.cfg` but supports typed values with suffixes: `I` (int), `L` (long), `F` (float), `D` (double), `B` (byte), `S` (short), `C` (char). Arrays use square brackets `[ "a", "b" ]`. Booleans are `B"true"` or unquoted `true`/`false`. Convert types to their JSON equivalents (numbers, booleans, arrays). Drop type suffixes.
+
+**XML `sling:OsgiConfig` nodes**
+
+JCR content XML (`.content.xml`) with `jcr:primaryType="sling:OsgiConfig"`. Each `@property` attribute is a config property. Type hints in curly braces: `{Long}`, `{Boolean}`, etc. Arrays use `[]`. Convert to JSON, derive PID from the node name, write as `<PID>.cfg.json`. **Do not delete** the `.content.xml` if it contains non-OSGi nodes — only remove the `sling:OsgiConfig` node from it.
+
+**After conversion:** Proceed with the converted `.cfg.json` files in Phase 1+. Mention converted files in the report.
+
+---
+
+### Phase 1 — Cleanup and consolidation (flag-only)
+
+This phase **flags** issues for user review. **Do not auto-delete or auto-merge** — list findings in the handoff file under a `"cleanup"` array.
+
+**1a. Invalid runmode folders**
+
+Compare every `config.*` folder name against the **valid Cloud Service runmode tokens** table above. Flag any folder that does not match (e.g. `config.qa`, `config.integration`, `config.local`, `config.ams`, `config.nosamplecontent`). Report: folder path, suggested action ("review and remove or remap to valid runmode").
+
+**1b. Archetype / boilerplate configs**
+
+Flag `.cfg.json` files whose **PID** matches the list below — these are commonly generated by the AEM archetype and are often unnecessary or need review before deploying to Cloud Service:
+
+| PID | Why flag |
+|-----|----------|
+| `org.apache.sling.commons.log.LogManager.factory.config*` | Custom logger factories — review log levels; Cloud Service uses centralized logging |
+| `org.apache.sling.jcr.davex.impl.servlets.SlingDavExServlet` | WebDAV — disabled on Cloud Service |
+| `org.apache.sling.servlets.get.DefaultGetServlet` | Default GET servlet — usually archetype boilerplate |
+| `com.day.cq.wcm.core.impl.AuthoringUIMode` | Touch UI default — unnecessary on Cloud Service |
+| `com.adobe.granite.auth.saml.SamlAuthenticationHandler.factory*` | SAML — must be validated against Cloud Service IDP setup |
+| `org.apache.sling.security.impl.ReferrerFilter` | Referrer filter — Cloud Service has its own; review carefully |
+| `org.apache.sling.engine.impl.SlingMainServlet` | Sling main servlet — rarely needs override on Cloud Service |
+
+Action: flag with `"needs_user_review": true` and reason. **Do not delete.**
+
+**1c. Duplicate configs across runmode folders**
+
+For each PID, if the **exact same JSON content** appears in multiple runmode folders (e.g. `config.author.dev/` and `config.author.stage/` have identical files), flag as a consolidation candidate. Suggest moving to the least-specific common parent folder (e.g. `config.author/`). **Do not auto-merge.**
+
+**1d. Environment-specific URLs**
+
+Scan `.cfg.json` **string values** for patterns that look like environment-specific URLs: values matching `https?://` that contain hostname fragments suggesting a specific environment (substrings: `dev`, `stage`, `stg`, `qa`, `uat`, `prod`, `preprod`, `localhost`, `local`, or IP addresses like `10.*`, `192.168.*`). Flag each with the property key, current value, and `"needs_user_review": true, "reason": "Possible environment-specific URL — consider $[env:VAR_NAME]"`. **Do not auto-replace** — URL classification requires human judgment.
+
+**1e. Deprecated / Cloud Service–incompatible configs**
+
+Flag `.cfg.json` files whose **PID** matches known deprecated or incompatible services:
+
+| PID pattern | Reason |
+|-------------|--------|
+| `com.day.cq.replication.impl.AgentManagerImpl` | Replication agents — Cloud Service uses Sling content distribution |
+| `com.day.cq.replication.impl.TransportHandler*` | Transport handlers — not applicable on Cloud Service |
+| `org.apache.sling.jcr.webdav.impl.servlets.SimpleWebDavServlet` | WebDAV servlet — disabled on Cloud Service |
+| `com.day.cq.mailer.DefaultMailService` | Mail service — review; Cloud Service uses different mail configuration |
+| `org.apache.felix.http.jetty*` | Jetty tuning — managed by Adobe on Cloud Service |
+
+Flag with reason. **Do not delete.**
+
+---
+
+### Phase 2 — Placeholder injection (secrets and env vars)
+
+This is the original core workflow, now applied **after** Phase 0 and Phase 1.
+
+1. Glob all **`.cfg.json`** (including newly converted ones from Phase 0).
+2. For **custom** PIDs only: replace high-confidence **secrets** with **`"$[secret:VAR]"`**; replace eligible **non-secrets** with **`"$[env:VAR]"`** only when Adobe's rules above allow. Skip ambiguous or Adobe-owned configs → **`needs_user_review`** in the handoff file.
+3. Do **not** print secret values in chat. Remind user: set CM variables, then **delete** the handoff file; **git history** may still contain old secrets.
+
+---
+
+### Phase 3 — Handoff file
+
+Write gitignored **`cloudmanager-osgi-secrets.local.json`** at the AEM repo root. Structure:
+
+```json
+{
+  "_do_not_commit": "DELETE this file after applying variables in Cloud Manager",
+  "variables": [
+    {
+      "name": "VAR_NAME",
+      "value": "<original value>",
+      "cm_type": "secretString | string",
+      "placeholder": "$[secret:VAR_NAME]",
+      "cfg_json_path": "relative/path/to/file.cfg.json",
+      "json_property": "property.key",
+      "needs_user_review": false
+    }
+  ],
+  "cleanup": [
+    {
+      "type": "invalid_runmode | archetype_default | duplicate_config | env_specific_url | deprecated_config",
+      "path": "relative/path",
+      "detail": "human-readable description",
+      "suggestion": "what to do"
+    }
+  ],
+  "conversions": [
+    {
+      "original": "relative/path/to/legacy.config",
+      "converted": "relative/path/to/PID.cfg.json"
+    }
+  ]
+}
+```
+
+- Add **`.gitignore`** entry if missing.
+- Respect **200** variables and **2048**-char values.
+- User deletes file after Cloud Manager is updated and cleanup items are resolved.
 
 ### Detection heuristics (agent)
 
-Treat as secret candidates when keys suggest sensitivity (`password`, `secret`, `apikey`, `token`, `clientsecret`, `credential`, `privatekey`, etc.) or values are obviously secret; exclude hostnames, public IDs, and non-secret flags unless keys indicate otherwise.
+**Secrets:** Treat as secret candidates when keys suggest sensitivity (`password`, `secret`, `apikey`, `token`, `clientsecret`, `credential`, `privatekey`, etc.) or values are obviously secret; exclude hostnames, public IDs, and non-secret flags unless keys indicate otherwise.
+
+**Env-specific URLs:** Match `https?://` values against hostname fragments (`dev`, `stage`, `stg`, `qa`, `uat`, `prod`, `preprod`, `localhost`, `local`, or private IPs). Flag only — **do not** auto-replace.
+
+**Archetype / deprecated PIDs:** Match filenames (minus `.cfg.json`) against the PID tables in Phases 1b and 1e. Use **prefix matching** for factory configs (PID ending in `*` in the tables).
 
 ---
 
 ## One-line summary
 
-**Scan** scoped **`.cfg.json`** → apply Adobe rules above for **`$[secret:]`** / **`$[env:]`** on **custom** properties only → gitignored handoff with **`cm_type`** → **no** secrets in chat.
+**Phase 0:** convert legacy formats → **Phase 1:** flag invalid runmodes, archetype defaults, duplicates, env-specific URLs, deprecated configs → **Phase 2:** inject `$[secret:]` / `$[env:]` placeholders on custom PIDs → **Phase 3:** gitignored handoff file with variables + cleanup items → **no** secrets in chat.
