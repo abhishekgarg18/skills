@@ -12,6 +12,9 @@ node_modules/
 # Temporary files
 drafts/tmp/
 
+# OMC state
+.omc/
+
 # Release artifacts
 *.skill
 dist/
