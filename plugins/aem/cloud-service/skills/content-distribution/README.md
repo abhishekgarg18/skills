@@ -141,14 +141,14 @@ public class CacheWarmingHandler implements EventHandler {
 | Constraint | Limit |
 |-----------|-------|
 | Paths per API call (recommended) | 100 |
-| Paths per API call (hard limit) | 500 |
+| Paths per API call (above 100) | System auto-splits into non-transactional chunks |
 | Transactional guarantee | ≤100 paths only |
 | Payload size | 10 MB maximum |
 
 ### Best Practices
 
 1. **Respect rate limits**: ≤100 paths per call for transactional guarantee
-2. **Use workflow for large operations**: Tree Activation workflow step for >500 paths
+2. **Use workflow for large trees**: Tree Activation workflow step for large hierarchical content trees
 3. **Handle failures gracefully**: Always catch `ReplicationException`
 4. **Use service users**: Never replicate with admin credentials
 5. **Publish only what's needed**: Avoid unnecessary bulk operations
@@ -355,7 +355,7 @@ public class MyDistributionHandler implements EventHandler {
 | ReplicationException | Permission denied | Check service user has `crx:replicate` permission |
 | Content not appearing | Wrong tier selected | Verify agent filter targets correct tier (preview vs publish) |
 | Event handler not firing | Wrong event topic | Use exact constants from `DistributionEventTopics` |
-| "Too many paths" error | Exceeded 500 path limit | Batch requests or use Tree Activation workflow |
+| "Too many paths" error | >100 paths lose transactional guarantee | Use ≤100 for atomicity; system auto-splits larger sets |
 
 ### Debug Checklist
 

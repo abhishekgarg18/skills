@@ -113,71 +113,40 @@ public class ContentPublisher {
 
 ## Bulk Replication: Multiple Paths
 
-**IMPORTANT CONSTRAINTS**:
-- **Recommended limit**: 100 paths per call
-- **Hard limit**: 500 paths per call
-- **Transactional guarantee**: Only for ≤100 paths
+**CONSTRAINTS** (per [official Javadoc](https://developer.adobe.com/experience-manager/reference-materials/cloud-service/javadoc/com/day/cq/replication/Replicator.html)):
+- **Recommended limit**: 100 paths per call for a transactional guarantee
+- **Above 100 paths**: the system automatically splits into multiple non-transactional chunks — no extra options needed
 - **Payload size**: 10 MB maximum (excluding binaries)
+
+> **Note**: `ReplicationOptions.setUseAtomicCalls()` is `@Deprecated` and marked "no longer required" in the Cloud Service Javadoc. Do **not** call it; the system handles auto-bucketing automatically.
 
 ### Example: Bulk Activation
 
 ```java
-import com.day.cq.replication.ReplicationOptions;
-
 public class BulkPublisher {
     
     @Reference
     private Replicator replicator;
     
     /**
-     * Publish multiple pages (up to 100 for transactional guarantee)
+     * Publish multiple pages.
+     * ≤100 paths → replicated atomically (transactional guarantee).
+     * >100 paths → system automatically splits into non-transactional chunks.
      */
     public void publishMultiplePages(Session session, String[] pagePaths) 
             throws ReplicationException {
         
-        // Validate path count
-        if (pagePaths.length > 100) {
-            throw new IllegalArgumentException(
-                "For transactional guarantee, limit to 100 paths. Got: " + pagePaths.length
-            );
-        }
-        
-        // Replicate all paths atomically
         replicator.replicate(
             session,
             ReplicationActionType.ACTIVATE,
             pagePaths,
-            null  // No additional options
-        );
-    }
-    
-    /**
-     * Bulk publish with automatic bucketing (>100 paths)
-     */
-    public void publishLargeSet(Session session, String[] pagePaths) 
-            throws ReplicationException {
-        
-        if (pagePaths.length > 500) {
-            throw new IllegalArgumentException(
-                "Hard limit is 500 paths per call. Got: " + pagePaths.length
-            );
-        }
-        
-        // Use non-atomic calls for automatic bucketing
-        ReplicationOptions options = new ReplicationOptions();
-        options.setUseAtomicCalls(false);  // Enable automatic bucketing
-        
-        replicator.replicate(
-            session,
-            ReplicationActionType.ACTIVATE,
-            pagePaths,
-            options
+            null  // No options needed; system handles auto-bucketing above 100 paths
         );
     }
 }
 ```
 
-**Best Practice**: For bulk operations >500 paths, use Tree Activation workflow step instead of custom code.
+**Best Practice**: For large hierarchical content trees, use the Tree Activation workflow step instead of custom code.
 
 ## Publishing to Preview Tier
 
@@ -401,7 +370,57 @@ public class StatusChecker {
 
 ### Batch Status Queries
 
-For checking status of multiple resources, use `ReplicationStatusProvider.getBatchReplicationStatus()` for better performance.
+Use `ReplicationStatusProvider.getBatchReplicationStatus()` when you need to check the publication state of multiple resources in a single call. It is more efficient than calling `Replicator.getReplicationStatus()` in a loop.
+
+**Javadoc**: `com.day.cq.replication.ReplicationStatusProvider`
+
+```java
+import com.day.cq.replication.ReplicationStatus;
+import com.day.cq.replication.ReplicationStatusProvider;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+
+@Component(service = BatchStatusChecker.class)
+public class BatchStatusChecker {
+
+    @Reference
+    private ReplicationStatusProvider replicationStatusProvider;
+
+    /**
+     * Returns a map of path → ReplicationStatus for all given paths.
+     * Uses ReplicationStatusProvider.getBatchReplicationStatus(Resource...)
+     * which is more efficient than per-path Replicator.getReplicationStatus() calls.
+     */
+    public Map<String, Boolean> checkPublishedState(ResourceResolver resolver, String[] paths) {
+        // Resolve all paths to Resource objects
+        Resource[] resources = Arrays.stream(paths)
+            .map(resolver::getResource)
+            .filter(Objects::nonNull)
+            .toArray(Resource[]::new);
+
+        // Single batch call — returns Map<path, ReplicationStatus>
+        Map<String, ReplicationStatus> statusMap =
+            replicationStatusProvider.getBatchReplicationStatus(resources);
+
+        Map<String, Boolean> result = new LinkedHashMap<>();
+        for (String path : paths) {
+            ReplicationStatus status = statusMap.get(path);
+            result.put(path, status != null && status.isActivated());
+        }
+        return result;
+    }
+}
+```
+
+**Required imports**:
+```java
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+```
 
 ## Permission Checks
 
@@ -537,8 +556,7 @@ public class ReplicationEventLogger implements EventHandler {
 ## Best Practices
 
 ### 1. Respect Rate Limits
-- ≤100 paths per call for transactional guarantee
-- ≤500 paths hard limit
+- ≤100 paths per call for transactional guarantee; system auto-splits if exceeded
 - ≤10 MB payload size
 
 ### 2. Use Workflow for Large Operations
@@ -558,18 +576,34 @@ try {
 ```
 
 ### 5. Use Service Users
-Never replicate with admin credentials. Create service users with minimum required permissions.
+Never replicate with admin credentials. Map a sub-service name to the principal that holds `crx:replicate`.
 
-```xml
-<!-- Service user mapping -->
-<!-- ui.config/src/main/content/jcr_root/apps/myapp/osgiconfig/config/ -->
-<!-- org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl.amended-myapp.cfg.json -->
+**OSGi service user mapping**
+
+File: `ui.config/src/main/content/jcr_root/apps/myapp/osgiconfig/config/org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl.amended-myapp.cfg.json`
+
+```json
 {
   "user.mapping": [
     "com.myapp.core:contentPublisher=myapp-replication-service"
   ]
 }
 ```
+
+**Obtain the resolver in code**
+
+```java
+@Reference
+private ResourceResolverFactory resolverFactory;
+
+private ResourceResolver getServiceResolver() throws LoginException {
+    return resolverFactory.getServiceResourceResolver(
+        Map.of(ResourceResolverFactory.SUBSERVICE, "contentPublisher")
+    );
+}
+```
+
+> **Service user creation is out of scope here**: The principal `myapp-replication-service` must exist in the JCR with `jcr:read` + `crx:replicate` on `/content` before this mapping works. Service users in AEM Cloud Service are provisioned via **Repo Init scripts** which run **at deployment startup** (not as dynamic runtime config changes). This is a general AEM Cloud Service pattern — see [AEM Project Structure — Repo Init](https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/developing/aem-project-content-package-structure#repo-init) for the full authoritative guide.
 
 ### 6. Publish Only What's Needed
 "It is always a good practice to only publish content that must be published."
@@ -679,9 +713,9 @@ public class ExternalCachePurgeHandler implements EventHandler {
 
 ### Issue: Replication Fails Silently
 
-**Check**: Verify replication queues in Felix console
+**Check**: Verify replication queues in Felix console (Sling Jobs console):
 ```
-https://author-p12345-e67890.adobeaemcloud.com/system/console/slingjobs
+https://author-p<programId>-e<envId>.adobeaemcloud.com/system/console/slingjobs
 ```
 
 Look for failed jobs with topic: `com/day/cq/replication`

@@ -208,12 +208,12 @@ public class FailureAlertHandler implements EventHandler {
 
 | Constraint | Limit | Impact |
 |-----------|-------|--------|
-| Paths per API call (recommended) | 100 | Transactional guarantee |
-| Paths per API call (hard limit) | 500 | Beyond this, call fails |
+| Paths per API call (recommended) | 100 | Transactional guarantee; system auto-splits above this |
 | Payload size | 10 MB | Excluding binaries |
-| Use atomic calls | false | For >100 paths, enables auto-bucketing |
 
-**Best Practice**: For operations >500 paths, use Tree Activation workflow step instead of custom code.
+> **Note**: `ReplicationOptions.setUseAtomicCalls()` is `@Deprecated` / "no longer required" per the Cloud Service Javadoc — the system handles auto-bucketing automatically for >100 paths.
+
+**Best Practice**: For large hierarchical content trees, use the Tree Activation workflow step instead of custom code.
 
 ## Key Differences from AEM 6.x
 
@@ -234,9 +234,8 @@ public class FailureAlertHandler implements EventHandler {
 - Content authors can use Quick Publish or Manage Publication
 
 **Use Tree Activation workflow** when:
-- Publishing >500 paths
-- Large hierarchical content trees
-- Don't need custom logic
+- Publishing large hierarchical content trees
+- Bulk operations across hundreds of paths and no custom logic is needed
 
 ## Quick Reference
 
@@ -321,7 +320,7 @@ public class DistributionMonitor implements EventHandler {
 |-------|----------|
 | `ReplicationException` | Check service user has `crx:replicate` permission |
 | Content not on target tier | Verify agent filter, check replication status |
-| "Too many paths" error | Reduce to ≤500 paths or use Tree Activation workflow |
+| "Too many paths" error | Use ≤100 paths for transactional guarantee, or pass all paths — system auto-splits |
 
 ### Event Handling Issues
 
@@ -344,3 +343,4 @@ For detailed examples, code samples, and advanced usage:
 - **Sling Distribution Javadoc**: https://developer.adobe.com/experience-manager/reference-materials/cloud-service/javadoc/org/apache/sling/distribution/package-summary.html
 - **Adobe Documentation**: https://experienceleague.adobe.com/docs/experience-manager-cloud-service/content/operations/replication.html
 - **Sling Distribution**: https://sling.apache.org/documentation/bundles/content-distribution.html
+- **Service Users / Repo Init**: https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/developing/aem-project-content-package-structure#repo-init
